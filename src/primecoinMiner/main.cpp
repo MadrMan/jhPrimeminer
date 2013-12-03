@@ -1,9 +1,11 @@
 #include"global.h"
 
+#ifdef _WIN32
 #include<intrin.h>
+#include<conio.h>
+#endif
 #include<ctime>
 #include<map>
-#include<conio.h>
 
 primeStats_t primeStats = {0};
 volatile int total_shares = 0;
@@ -254,7 +256,7 @@ typedef struct
 
 typedef struct  
 {
-   CRITICAL_SECTION cs;
+   JHCritSec cs;
    uint8 protocolMode;
    // xpm
    workDataEntry_t workEntry[128]; // work data for each thread (up to 128)
@@ -457,7 +459,7 @@ int queryLocalPrimecoindBlockCount(bool useLocal)
 
 static double DIFFEXACTONE = 26959946667150639794667015087019630673637144422540572481103610249215.0;
 static const uint64_t diffone = 0xFFFF000000000000ull;
-
+/*
 static double target_diff(const unsigned char *target)
 {
    double targ = 0;
@@ -468,7 +470,7 @@ static double target_diff(const unsigned char *target)
 
    return DIFFEXACTONE / (targ ? targ: 1);
 }
-
+*/
 double target_diff(const uint32_t  *target)
 {
    double targ = 0;
@@ -493,18 +495,9 @@ std::string HexBits(unsigned int nBits)
 
 static bool IsXptClientConnected()
 {
-   __try
-   {
       if (workData.xptClient == NULL || workData.xptClient->disconnected)
          return false;
-
-   }
-   __except(EXCEPTION_EXECUTE_HANDLER)
-   {
-      return false;
-   }
    return true;
-
 }
 
 /*
@@ -623,8 +616,8 @@ void jhMiner_queryWork_primecoin_getwork()
       uint8* stringData_data = jsonObject_getStringData(jsonResult_data, &stringData_length);
       //printf("data: %.*s...\n", (sint32)min(48, stringData_length), stringData_data);
 
-      EnterCriticalSection(&workData.cs);
-      jhMiner_parseHexString((char*)stringData_data, min(128*2, stringData_length), workData.workEntry[0].data);
+      workData.cs.lock();
+      jhMiner_parseHexString((char*)stringData_data, min(128*2, (int)stringData_length), workData.workEntry[0].data);
       workData.workEntry[0].dataIsValid = true;
       if (jsonResult_serverData == NULL)
       {
@@ -657,7 +650,7 @@ void jhMiner_queryWork_primecoin_getwork()
          workDataHash += (uint32)workData.workEntry[0].data[i];
       }
       workData.workEntry[0].dataHash = workDataHash;
-      LeaveCriticalSection(&workData.cs);
+      workData.cs.unlock();
       jsonObject_freeObject(jsonReturnValue);
    }
 }
@@ -761,11 +754,11 @@ int jhMiner_workerThread_getwork(int threadIndex)
       uint32 workDataHash = 0;
       uint8 serverData[32];
       while( workData.workEntry[0].dataIsValid == false ) Sleep(200);
-      EnterCriticalSection(&workData.cs);
+      workData.cs.lock();
       memcpy(localBlockData, workData.workEntry[0].data, 128);
       //seed = workData.seed;
       memcpy(serverData, workData.workEntry[0].serverData, 32);
-      LeaveCriticalSection(&workData.cs);
+      workData.cs.unlock();
       // swap endianess
       for(uint32 i=0; i<128/4; i++)
       {
@@ -828,7 +821,7 @@ int jhMiner_workerThread_gbt(int threadIndex)
       //uint32 workDataHash = 0;
       //uint8 serverData[32];
       while( getBlockTemplateData.isValidData == false ) Sleep(200);
-      EnterCriticalSection(&workData.cs);
+      workData.cs.lock();
       // generate work from getBlockTemplate data
       primecoinBlock.threadIndex = threadIndex;
       primecoinBlock.version = getBlockTemplateData.version;
@@ -851,7 +844,7 @@ int jhMiner_workerThread_gbt(int threadIndex)
          bitclient_generateTxHash(txList[t], (txHashList+t*32));
       bitclient_calculateMerkleRoot(txHashList, numberOfTx, primecoinBlock.merkleRoot);
       bitclient_destroyTransaction(txCoinbase);
-      LeaveCriticalSection(&workData.cs);
+      workData.cs.unlock();
       primecoinBlock.xptMode = false;
       // start mining
       if (!BitcoinMiner(&primecoinBlock, psieve, threadIndex, commandlineInput.numThreads))
@@ -879,11 +872,11 @@ int jhMiner_workerThread_xpt(int threadIndex)
       uint32 workDataHash = 0;
       uint8 serverData[32];
       while( workData.workEntry[threadIndex].dataIsValid == false ) Sleep(50);
-      EnterCriticalSection(&workData.cs);
+      workData.cs.lock();
       memcpy(localBlockData, workData.workEntry[threadIndex].data, 128);
       memcpy(serverData, workData.workEntry[threadIndex].serverData, 32);
       workDataHash = workData.workEntry[threadIndex].dataHash;
-      LeaveCriticalSection(&workData.cs);
+      workData.cs.unlock();
       // convert raw data into primecoin block
       primecoinBlock_t primecoinBlock = {0};
       memcpy(&primecoinBlock, localBlockData, 80);
@@ -933,7 +926,7 @@ void jhMiner_printHelp()
    puts("Example usage:");
    puts("   jhPrimeminer.exe -o http://poolurl.com:8332 -u workername.1 -p workerpass -t 4");
    puts("Press any key to continue...");
-   _getch();
+   getchar();
 }
 
 void jhMiner_parseCommandline(int argc, char **argv)
@@ -1308,8 +1301,6 @@ bool bEnablenPrimorialMultiplierTuning = true;
 
 static void RoundSieveAutoTuningWorkerThread(bool bEnabled)
 {
-   __try
-   {
 
 
       // Auto Tuning for nPrimorialMultiplier
@@ -1346,7 +1337,7 @@ static void RoundSieveAutoTuningWorkerThread(bool bEnabled)
 
          if (ratio > nRoundSievePercentage + 5)
          {
-            if (!PrimeTableGetNextPrime((unsigned int)  primeStats.nPrimorialMultiplier))
+            if (!PrimeTableGetNextPrime((unsigned int&)primeStats.nPrimorialMultiplier))
                error("PrimecoinMiner() : primorial increment overflow");
             printf( "Sieve/Test ratio: %.01f / %.01f %%  - New PrimorialMultiplier: %u\n", ratio, 100.0 - ratio,  primeStats.nPrimorialMultiplier);
          }
@@ -1354,16 +1345,12 @@ static void RoundSieveAutoTuningWorkerThread(bool bEnabled)
          {
             if ( primeStats.nPrimorialMultiplier > 2)
             {
-               if (!PrimeTableGetPreviousPrime((unsigned int) primeStats.nPrimorialMultiplier))
+               if (!PrimeTableGetPreviousPrime((unsigned int&)primeStats.nPrimorialMultiplier))
                   error("PrimecoinMiner() : primorial decrement overflow");
                printf( "Sieve/Test ratio: %.01f / %.01f %%  - New PrimorialMultiplier: %u\n", ratio, 100.0 - ratio,  primeStats.nPrimorialMultiplier);
             }
          }
       }
-   }
-   __except(EXCEPTION_EXECUTE_HANDLER)
-   {
-   }
 
 }
 
@@ -1406,7 +1393,7 @@ static void input_thread()
    while (true) 
    {
       int input;
-      input = _getch();		
+      input = getchar();		
       switch (input) {
       case 'q': case 'Q': case 3: //case 27:
          appQuitSignal = true;
@@ -1415,12 +1402,12 @@ static void input_thread()
          return;
          break;
       case '[':
-         if (!PrimeTableGetPreviousPrime((unsigned int) primeStats.nPrimorialMultiplier))
+         if (!PrimeTableGetPreviousPrime((unsigned int&) primeStats.nPrimorialMultiplier))
             error("PrimecoinMiner() : primorial decrement overflow");	
          printf("Primorial Multiplier: %u\n", primeStats.nPrimorialMultiplier);
          break;
       case ']':
-         if (!PrimeTableGetNextPrime((unsigned int)  primeStats.nPrimorialMultiplier))
+         if (!PrimeTableGetNextPrime((unsigned int&)  primeStats.nPrimorialMultiplier))
             error("PrimecoinMiner() : primorial increment overflow");
          printf("Primorial Multiplier: %u\n", primeStats.nPrimorialMultiplier);
          break;
@@ -1450,7 +1437,7 @@ static void input_thread()
          break;
       case 0: case 224:
          {
-            input = _getch();	
+            input = getchar();	
             switch (input)
             {
             case 72: // key up
@@ -1511,8 +1498,6 @@ static void watchdog_thread(std::map<DWORD, HANDLE> threadMap)
             {
                //restart the thread
                printf("Restarting thread %d\n", i);
-               //__try
-               //{
 
                //HANDLE h = threadMap.at(i);
                thMap_Iter = threadMap.find(i);
@@ -1520,22 +1505,18 @@ static void watchdog_thread(std::map<DWORD, HANDLE> threadMap)
                {
                   HANDLE h = thMap_Iter->second;
                   TerminateThread( h, 0);
-                  Sleep(1000);
                   CloseHandle(h);
                   Sleep(1000);
                   threadHearthBeat[i] = GetTickCount();
                   threadMap.erase(thMap_Iter);
 
                   h = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)jhMiner_workerThread_xpt, (LPVOID)i, 0, 0);
-                  SetThreadPriority(h, THREAD_PRIORITY_BELOW_NORMAL);
-
+                  #ifdef _WIN32
+		  SetThreadPriority(h, THREAD_PRIORITY_BELOW_NORMAL);
+		  #endif
                   threadMap.insert(thMapKeyVal(i,h));
 
                }
-               /*}
-               __except(EXCEPTION_EXECUTE_HANDLER)
-               {
-               }*/
             }
          }
          Sleep( 1*1000);
@@ -1742,7 +1723,7 @@ int jhMiner_main_xptMode()
          if( passedTime >= 4000 )
             break;
          xptClient_process(workData.xptClient);
-         char* disconnectReason = false;
+         char* disconnectReason = NULL;
          if( workData.xptClient == NULL || xptClient_isDisconnected(workData.xptClient, &disconnectReason) )
          {
             // disconnected, mark all data entries as invalid
@@ -1806,10 +1787,14 @@ int main(int argc, char **argv)
 {
    // setup some default values
    commandlineInput.port = 10034;
+#ifdef _WIN32
    SYSTEM_INFO sysinfo;
    GetSystemInfo( &sysinfo );
    commandlineInput.numThreads = sysinfo.dwNumberOfProcessors;
    commandlineInput.numThreads = max(commandlineInput.numThreads, 1);
+#else
+   commandlineInput.numThreads = 1;
+#endif
    commandlineInput.sieveSize = 1024000; // default maxSieveSize
    commandlineInput.sievePercentage = 10; // default 
    commandlineInput.roundSievePercentage = 70; // default 
@@ -1885,7 +1870,10 @@ int main(int argc, char **argv)
    printf("\xC8\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xBC\n");
    printf("Launching miner...\n");
    // set priority lower so the user still can do other things
+   #ifdef _WIN32
    SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
+   #endif
+   
    // init memory speedup (if not already done in preMain)
    //mallocSpeedupInit();
    if( pctx == NULL )
@@ -1894,10 +1882,10 @@ int main(int argc, char **argv)
    GeneratePrimeTable(commandlineInput.sievePrimeLimit);
    printf("Sieve Percentage: %u %%\n", nSievePercentage);
    // init winsock
+   #ifdef _WIN32
    WSADATA wsa;
    WSAStartup(MAKEWORD(2,2),&wsa);
-   // init critical section
-   InitializeCriticalSection(&workData.cs);
+   #endif
    // connect to host
    hostent* hostInfo = gethostbyname(commandlineInput.host);
    if( hostInfo == NULL )
@@ -2061,7 +2049,9 @@ int main(int argc, char **argv)
       else if( workData.protocolMode == MINER_PROTOCOL_XPUSHTHROUGH )
          hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)jhMiner_workerThread_xpt, (LPVOID)threadIdx, 0, 0);
 
+#ifdef _WIN32
       SetThreadPriority(hThread, THREAD_PRIORITY_BELOW_NORMAL);
+#endif      
       threadMap.insert(thMapKeyVal(threadIdx,hThread));
       threadHearthBeat[threadIdx] = GetTickCount();
    }

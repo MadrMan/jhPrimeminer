@@ -1,6 +1,24 @@
+#ifdef _WIN32
 #pragma comment(lib,"Ws2_32.lib")
 #include<Winsock2.h>
 #include<ws2tcpip.h>
+#endif
+
+#if _MSC_VER < 1500
+#include<stdint.h>
+#else
+// stdint.h not present in vs2008, use these defines instead:
+typedef signed char int8_t;
+typedef short int int16_t;
+typedef int int32_t;
+typedef __int64 int64_t;
+
+typedef unsigned char uint8_t;
+typedef unsigned short int uint16_t;
+typedef unsigned int uint32_t;
+typedef unsigned __int64 uint64_t;
+#endif
+
 #include"jhlib/JHLib.h"
 
 #include<stdio.h>
@@ -38,20 +56,7 @@ int BN2_uadd(BIGNUM *r, const BIGNUM *a, const BIGNUM *b);
 
 #include "mpirxx.h"
 #include "mpir.h"
-#ifndef _MSC_VER == 1500
-#include<stdint.h>
-#else
-// stdint.h not present in vs2008, use these defines instead:
-typedef signed char int8_t;
-typedef short int int16_t;
-typedef int int32_t;
-typedef __int64 int64_t;
 
-typedef unsigned char uint8_t;
-typedef unsigned short int uint16_t;
-typedef unsigned int uint32_t;
-typedef unsigned __int64 uint64_t;
-#endif
 #include"xptServer.h"
 #include"xptClient.h"
 
@@ -141,7 +146,7 @@ typedef struct
    volatile float nSieveRounds;
    volatile float nCandidateCount;
 
-	CRITICAL_SECTION cs;
+	JHCritSec cs;
 
 	// since we can generate many (useless) primes ultra fast if we simply set sieve size low, 
 	// its better if we only count primes with at least a given difficulty
@@ -210,7 +215,7 @@ extern volatile int valid_shares;
 extern std::set<mpz_class> multiplierSet;
 extern bool appQuitSignal;
 
-extern __declspec( thread ) BN_CTX* pctx;
+extern TLSVARIABLE BN_CTX* pctx;
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 #endif

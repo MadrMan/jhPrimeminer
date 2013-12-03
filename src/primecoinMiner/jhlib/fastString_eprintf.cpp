@@ -463,9 +463,9 @@ int esprintf_X(char *out, unsigned int value, int padRight, int padZero, int wid
  * Param = pointer to parameters used for format insertion
  */
 #ifdef _WIN64
-void __cdecl _esprintf(char *out, char *format, uint64 *param, unsigned int *lengthOut)
+void _esprintf(char *out, char *format, uint64 *param, unsigned int *lengthOut)
 #else
-void __cdecl _esprintf(char *out, char *format, unsigned int *param, unsigned int *lengthOut)
+void _esprintf(char *out, char *format, unsigned int *param, unsigned int *lengthOut)
 #endif
 {
 	if( lengthOut )

@@ -40,9 +40,13 @@ xptServerClient_t* xptServer_newClient(xptServer_t* xptServer, SOCKET s)
 	xptServerClient->packetbuffer = xptPacketbuffer_create(4*1024); // 4kb
 	xptServerClient->xptServer = xptServer;
 	// set socket as non-blocking
+#if _WIN32
 	unsigned int nonblocking=1;
 	unsigned int cbRet;
 	WSAIoctl(s, FIONBIO, &nonblocking, sizeof(nonblocking), NULL, 0, (LPDWORD)&cbRet, NULL, NULL);
+#else
+	fcntl(s, F_SETFL, O_NONBLOCK);
+#endif
 	// return client object
 	return xptServerClient;
 }
@@ -171,7 +175,7 @@ void xptServer_checkForNewBlocks(xptServer_t* xptServer)
  */
 void xptServer_startProcessing(xptServer_t* xptServer)
 {
-	FD_SET fd;
+	fd_set fd;
 	timeval sTimeout;
 	sTimeout.tv_sec = 0;
 	sTimeout.tv_usec = 250000;

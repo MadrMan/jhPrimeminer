@@ -115,13 +115,16 @@ int inline BN2_is_bit_set(const BIGNUM *a, int n)
  */
 int inline BN2_nz_num_unset_bits_from_lsb(const BIGNUM *a)
 {
-#ifdef _WIN32
 	sint32 bIdx = 0;
 	uint32 idx = 0;
 	sint32 maxIdx = a->top-1;
 	do 
 	{
+#ifdef _WIN32
 		_BitScanForward(&idx, a->d[bIdx]);
+#else
+		idx = __builtin_ctz(a->d[bIdx]);
+#endif
 		if( idx==0 )
 		{
 			if( bIdx >= maxIdx )
@@ -132,10 +135,6 @@ int inline BN2_nz_num_unset_bits_from_lsb(const BIGNUM *a)
 			break;
 	}while(true);
 	return bIdx*32+idx;
-	// _BitScanReverse
-#else
-	needs implementation
-#endif
 }
 
 

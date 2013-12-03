@@ -14,15 +14,21 @@
 uint32* vPrimesTwoInverse;
 uint32 vPrimesSize = 0;
 
-__declspec( thread ) BN_CTX* pctx = NULL;
+TLSVARIABLE BN_CTX* pctx = NULL;
 
 // changed to return the ticks since reboot
 // doesnt need to be the correct time, just a more or less random input value
 uint64 GetTimeMicros()
 {
+#ifdef _WIN32
    LARGE_INTEGER t;
    QueryPerformanceCounter(&t);
    return (uint64)t.QuadPart;
+#else
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+	return (DWORD)(ts.tv_sec * 1000000 + ts.tv_nsec / 1000);
+#endif
 }
 
 
@@ -940,7 +946,7 @@ bool MineProbablePrimeChain(CSieveOfEratosthenes*& psieve, primecoinBlock_t* blo
          continue;
       }
 
-      primeStats.bestPrimeChainDifficultySinceLaunch = max(primeStats.bestPrimeChainDifficultySinceLaunch, nProbableChainLength);
+      primeStats.bestPrimeChainDifficultySinceLaunch = max((double)primeStats.bestPrimeChainDifficultySinceLaunch, (double)nProbableChainLength);
 
 
       if(nProbableChainLength >= block->serverData.nBitsForShare)

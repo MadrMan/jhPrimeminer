@@ -72,9 +72,6 @@
     <ClCompile Include="jhlib\hashTable_uint32.cpp">
       <Filter>Source Files\jhlib</Filter>
     </ClCompile>
-    <ClCompile Include="jhlib\msgQueue.cpp">
-      <Filter>Source Files\jhlib</Filter>
-    </ClCompile>
     <ClCompile Include="jhlib\packetBuffer.cpp">
       <Filter>Source Files\jhlib</Filter>
     </ClCompile>
@@ -171,9 +168,6 @@
       <Filter>Source Files\jhlib</Filter>
     </ClInclude>
     <ClInclude Include="jhlib\JHLib.h">
-      <Filter>Source Files\jhlib</Filter>
-    </ClInclude>
-    <ClInclude Include="jhlib\msgQueue.h">
       <Filter>Source Files\jhlib</Filter>
     </ClInclude>
     <ClInclude Include="jhlib\packetBuffer.h">
