@@ -4,7 +4,10 @@
 #include<ws2tcpip.h>
 #endif
 
-#if _MSC_VER < 1500
+#include "mpirxx.h"
+#include "mpir.h"
+
+#if _MSC_VER > 1500 || !defined(_MSC_VER)
 #include<stdint.h>
 #else
 // stdint.h not present in vs2008, use these defines instead:
@@ -53,9 +56,6 @@ int BN2_uadd(BIGNUM *r, const BIGNUM *a, const BIGNUM *b);
 #include"bignum2.h"
 #include"prime.h"
 #include"jsonrpc.h"
-
-#include "mpirxx.h"
-#include "mpir.h"
 
 #include"xptServer.h"
 #include"xptClient.h"
