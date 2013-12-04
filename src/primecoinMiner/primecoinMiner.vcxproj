@@ -332,6 +332,7 @@
       <AdditionalOptions>/favor:INTEL64 %(AdditionalOptions)</AdditionalOptions>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <PreprocessorDefinitions>NOMINMAX;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4800</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <AdditionalDependencies>lib\openssl64\libeay32MT.lib;lib\openssl64\ssleay32MT.lib;lib\mpir\mpirxx.lib;lib\mpir\mpir.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -347,21 +348,16 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="miner.cpp" />
     <ClCompile Include="prime.cpp" />
-    <ClCompile Include="jhlib\bmp.cpp" />
     <ClCompile Include="jhlib\customBuffer.cpp" />
     <ClCompile Include="jhlib\fastSorter.cpp" />
     <ClCompile Include="jhlib\fastString.cpp" />
     <ClCompile Include="jhlib\fastString_eprintf.cpp" />
-    <ClCompile Include="jhlib\fileMgr.cpp" />
-    <ClCompile Include="jhlib\fMath.cpp" />
     <ClCompile Include="jhlib\hashTable_uint32.cpp" />
     <ClCompile Include="jhlib\packetBuffer.cpp" />
-    <ClCompile Include="jhlib\perlinNoise.cpp" />
     <ClCompile Include="jhlib\sData.cpp" />
     <ClCompile Include="jhlib\simpleHTTP.cpp" />
     <ClCompile Include="jhlib\simpleList.cpp" />
     <ClCompile Include="jhlib\streamWrapper.cpp" />
-    <ClCompile Include="jhlib\tgaLib.cpp" />
     <ClCompile Include="ripemd160.cpp" />
     <ClCompile Include="sha256.cpp" />
     <ClCompile Include="includes\openssl\applink.c" />
@@ -385,12 +381,9 @@
     <ClInclude Include="bignum2.h" />
     <ClInclude Include="transaction.h" />
     <ClInclude Include="uint256.h" />
-    <ClInclude Include="jhlib\bmp.h" />
     <ClInclude Include="jhlib\customBuffer.h" />
     <ClInclude Include="jhlib\fastSorter.h" />
     <ClInclude Include="jhlib\fastString.h" />
-    <ClInclude Include="jhlib\fileMgr.h" />
-    <ClInclude Include="jhlib\fMath.h" />
     <ClInclude Include="jhlib\hashTable.h" />
     <ClInclude Include="jhlib\JHLib.h" />
     <ClInclude Include="jhlib\packetBuffer.h" />
@@ -398,7 +391,6 @@
     <ClInclude Include="jhlib\simpleHTTP.h" />
     <ClInclude Include="jhlib\simpleList.h" />
     <ClInclude Include="jhlib\streamWrapper.h" />
-    <ClInclude Include="jhlib\tgaLib.h" />
     <ClInclude Include="ripemd160.h" />
     <ClInclude Include="sha256.h" />
     <ClInclude Include="includes\openssl\aes.h" />

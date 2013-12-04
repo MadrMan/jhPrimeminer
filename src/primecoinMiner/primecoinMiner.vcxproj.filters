@@ -48,9 +48,6 @@
     <ClCompile Include="miner.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="jhlib\bmp.cpp">
-      <Filter>Source Files\jhlib</Filter>
-    </ClCompile>
     <ClCompile Include="jhlib\customBuffer.cpp">
       <Filter>Source Files\jhlib</Filter>
     </ClCompile>
@@ -63,19 +60,10 @@
     <ClCompile Include="jhlib\fastString_eprintf.cpp">
       <Filter>Source Files\jhlib</Filter>
     </ClCompile>
-    <ClCompile Include="jhlib\fileMgr.cpp">
-      <Filter>Source Files\jhlib</Filter>
-    </ClCompile>
-    <ClCompile Include="jhlib\fMath.cpp">
-      <Filter>Source Files\jhlib</Filter>
-    </ClCompile>
     <ClCompile Include="jhlib\hashTable_uint32.cpp">
       <Filter>Source Files\jhlib</Filter>
     </ClCompile>
     <ClCompile Include="jhlib\packetBuffer.cpp">
-      <Filter>Source Files\jhlib</Filter>
-    </ClCompile>
-    <ClCompile Include="jhlib\perlinNoise.cpp">
       <Filter>Source Files\jhlib</Filter>
     </ClCompile>
     <ClCompile Include="jhlib\sData.cpp">
@@ -88,9 +76,6 @@
       <Filter>Source Files\jhlib</Filter>
     </ClCompile>
     <ClCompile Include="jhlib\streamWrapper.cpp">
-      <Filter>Source Files\jhlib</Filter>
-    </ClCompile>
-    <ClCompile Include="jhlib\tgaLib.cpp">
       <Filter>Source Files\jhlib</Filter>
     </ClCompile>
     <ClCompile Include="ripemd160.cpp">
@@ -146,9 +131,6 @@
     <ClInclude Include="uint256.h">
       <Filter>Source Files\bignum</Filter>
     </ClInclude>
-    <ClInclude Include="jhlib\bmp.h">
-      <Filter>Source Files\jhlib</Filter>
-    </ClInclude>
     <ClInclude Include="jhlib\customBuffer.h">
       <Filter>Source Files\jhlib</Filter>
     </ClInclude>
@@ -156,12 +138,6 @@
       <Filter>Source Files\jhlib</Filter>
     </ClInclude>
     <ClInclude Include="jhlib\fastString.h">
-      <Filter>Source Files\jhlib</Filter>
-    </ClInclude>
-    <ClInclude Include="jhlib\fileMgr.h">
-      <Filter>Source Files\jhlib</Filter>
-    </ClInclude>
-    <ClInclude Include="jhlib\fMath.h">
       <Filter>Source Files\jhlib</Filter>
     </ClInclude>
     <ClInclude Include="jhlib\hashTable.h">
@@ -183,9 +159,6 @@
       <Filter>Source Files\jhlib</Filter>
     </ClInclude>
     <ClInclude Include="jhlib\streamWrapper.h">
-      <Filter>Source Files\jhlib</Filter>
-    </ClInclude>
-    <ClInclude Include="jhlib\tgaLib.h">
       <Filter>Source Files\jhlib</Filter>
     </ClInclude>
     <ClInclude Include="ripemd160.h">
