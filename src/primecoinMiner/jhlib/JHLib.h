@@ -58,7 +58,7 @@ inline HANDLE CreateThread(LPVOID, size_t stackSize, LPTHREAD_START_ROUTINE a3, 
 
 inline void Sleep(int x) 
 {
-	struct timespec ts = {0 / 1000, (x * 1000000) % 1000000000};
+	struct timespec ts = {x / 1000, (x * 1000000) % 1000000000};
 	nanosleep(&ts, nullptr);
 }
 inline ULONGLONG GetTickCount64()
@@ -128,7 +128,7 @@ void _ex2_analyzeMemoryLog();
 #include"./tgaLib.h"
 #include"./fMath.h"
 #include"./packetBuffer.h"
-#include"./msgQueue.h"
+//#include"./msgQueue.h"
 #include"./simpleList.h"
 #include"./customBuffer.h"
 #include"./critSec.h"
