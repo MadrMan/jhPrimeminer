@@ -436,6 +436,7 @@ bool jhMiner_pushShare_primecoin(uint8 data[512], primecoinBlock_t* primecoinBlo
       }
 
    }
+   return true;
 }
 
 int queryLocalPrimecoindBlockCount(bool useLocal)
@@ -1477,51 +1478,49 @@ DWORD * threadHearthBeat;
 
 static void watchdog_thread(std::map<DWORD, HANDLE> threadMap)
 {
-   DWORD maxIdelTime = 30 * 1000; // Allow 30 secs of "idle" time between heartbeats before a thread is deemed "dead".
-   std::map <DWORD, HANDLE> :: const_iterator thMap_Iter;
-   while(true)
-   {
-      if ((workData.protocolMode == MINER_PROTOCOL_XPUSHTHROUGH) && (!IsXptClientConnected()))
-      {
-         // Miner is not connected, wait 5 secs before trying again.
-         Sleep(5000);
-         {
-            Sleep(10);
-            continue;
-         }
-         DWORD currentTick = GetTickCount();
+	DWORD maxIdelTime = 30 * 1000; // Allow 30 secs of "idle" time between heartbeats before a thread is deemed "dead".
+	std::map <DWORD, HANDLE> :: const_iterator thMap_Iter;
+	while(true)
+	{
+		if ((workData.protocolMode == MINER_PROTOCOL_XPUSHTHROUGH) && (!IsXptClientConnected()))
+		{
+			// Miner is not connected, wait 5 secs before trying again.
+			Sleep(5000);
+			continue;
+		}
 
-         for (int i = 0; i < threadMap.size(); i++)
-         {
-            DWORD heartBeatTick = threadHearthBeat[i];
-            if (currentTick - heartBeatTick > maxIdelTime)
-            {
-               //restart the thread
-               printf("Restarting thread %d\n", i);
+		DWORD currentTick = GetTickCount();
+		for (int i = 0; i < threadMap.size(); i++)
+		{
+			DWORD heartBeatTick = threadHearthBeat[i];
+			if (currentTick - heartBeatTick > maxIdelTime)
+			{
+				//restart the thread
+				printf("Restarting thread %d\n", i);
 
-               //HANDLE h = threadMap.at(i);
-               thMap_Iter = threadMap.find(i);
-               if (thMap_Iter != threadMap.end())
-               {
-                  HANDLE h = thMap_Iter->second;
-                  TerminateThread( h, 0);
-                  CloseHandle(h);
-                  Sleep(1000);
-                  threadHearthBeat[i] = GetTickCount();
-                  threadMap.erase(thMap_Iter);
+				//HANDLE h = threadMap.at(i);
+				thMap_Iter = threadMap.find(i);
+				if (thMap_Iter != threadMap.end())
+				{
+					HANDLE h = thMap_Iter->second;
+					TerminateThread(h, 0);
+					CloseHandle(h);
+					Sleep(1000);
+					threadHearthBeat[i] = GetTickCount();
+					threadMap.erase(thMap_Iter);
 
-                  h = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)jhMiner_workerThread_xpt, (LPVOID)i, 0, 0);
-                  #ifdef _WIN32
-		  SetThreadPriority(h, THREAD_PRIORITY_BELOW_NORMAL);
-		  #endif
-                  threadMap.insert(thMapKeyVal(i,h));
+					h = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) jhMiner_workerThread_xpt, (LPVOID) i, 0, 0);
+					#ifdef _WIN32
+					SetThreadPriority(h, THREAD_PRIORITY_BELOW_NORMAL);
+					#endif
+					threadMap.insert(thMapKeyVal(i, h));
 
-               }
-            }
-         }
-         Sleep( 1*1000);
-      }
-   }
+				}
+			}
+		}
+
+		Sleep(1000);
+	}
 }
 
 void OnNewBlock(double nBitsShare, double nBits, unsigned long blockHeight)
