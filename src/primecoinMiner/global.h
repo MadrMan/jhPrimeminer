@@ -4,8 +4,8 @@
 #include<ws2tcpip.h>
 #endif
 
-#include "mpirxx.h"
-#include "mpir.h"
+#include <mpirxx.h>
+#include <mpir.h>
 
 #if _MSC_VER > 1500 || !defined(_MSC_VER)
 #include<stdint.h>

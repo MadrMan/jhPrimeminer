@@ -148,7 +148,7 @@ jsonObject_t* jsonClient_request(jsonRequestTarget_t* server, char* methodName, 
 		if( server->authPass )
 			sprintf(authString, "%s:%s", server->authUser, server->authPass);
 		else
-			sprintf(authString, "%s", server->authUser); // without password
+			sprintf(authString, "%s", server->authUser); // without passwordi
 		sint32 base64EncodedLength = base64_encode((const unsigned char*)authString, fStrLen(authString), authStringEncoded);
 		authStringEncoded[base64EncodedLength] = '\0';
 		fStr_appendFormatted(fStr_headerData, "Authorization: Basic %s\r\n", authStringEncoded);
