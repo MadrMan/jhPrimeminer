@@ -20,6 +20,7 @@
 
 #include <string.h>
 
+#include "global.h"
 #include "sha256.h"
 
 #define GET_UINT32(n,b,i)                       \

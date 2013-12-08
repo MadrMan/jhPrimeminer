@@ -1,14 +1,6 @@
 #ifndef _SHA256_H
 #define _SHA256_H
 
-#ifndef uint8
-#define uint8  unsigned char
-#endif
-
-#ifndef uint32
-#define uint32 unsigned long int
-#endif
-
 typedef struct
 {
 	uint32 total[2];

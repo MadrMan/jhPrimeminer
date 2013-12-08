@@ -121,7 +121,7 @@ int inline BN2_nz_num_unset_bits_from_lsb(const BIGNUM *a)
 	do 
 	{
 #ifdef _WIN32
-		_BitScanForward(&idx, a->d[bIdx]);
+		_BitScanForward((DWORD*)&idx, a->d[bIdx]);
 #else
 		idx = __builtin_ctz(a->d[bIdx]);
 #endif
