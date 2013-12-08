@@ -1326,7 +1326,7 @@ static void RoundSieveAutoTuningWorkerThread(bool bEnabled)
          if (bOptimalL1SearchInProgress || !bEnablenPrimorialMultiplierTuning || !IsXptClientConnected())
             continue;
 
-         float ratio = primeStats.nWaveTime == 0 ? 0 : ((float)primeStats.nWaveTime / (float)(primeStats.nWaveTime + primeStats.nTestTime)) * 100.0;
+         float ratio = primeStats.nWaveTime == 0 ? 0 : ((float)primeStats.nWaveTime / (float)(primeStats.nWaveTime + primeStats.nTestTime)) * 100.0f;
          //printf("\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\n");
          //printf("WaveTime %u - Wave Round %u - L1CacheSize %u - TotalWaveTime: %u - TotalTestTime: %u - Ratio: %.01f / %.01f %%\n", 
          //	primeStats.nWaveRound == 0 ? 0 : primeStats.nWaveTime / primeStats.nWaveRound, primeStats.nWaveRound, nL1CacheElements,
@@ -1564,8 +1564,8 @@ void PrintStat()
       if( statsPassedTime < 1.0 ) statsPassedTime = 1.0; // avoid division by zero
       if( totalRunTime < 1.0 ) totalRunTime = 1.0; // avoid division by zero
       double primesPerSecond = (double)primeStats.primeChainsFound / (statsPassedTime / 1000.0);
-      float avgCandidatesPerRound = (double)primeStats.nCandidateCount / primeStats.nSieveRounds;
-      float sievesPerSecond = (double)primeStats.nSieveRounds / (statsPassedTime / 1000.0);
+      float avgCandidatesPerRound = primeStats.nCandidateCount / primeStats.nSieveRounds;
+      float sievesPerSecond = primeStats.nSieveRounds / (statsPassedTime / 1000.0);
 
       uint32 bestDifficulty = primeStats.bestPrimeChainDifficulty;
       primeStats.bestPrimeChainDifficulty = 0;
@@ -1899,7 +1899,7 @@ int main(int argc, char **argv)
       ip = *(uint32*)ipListPtr[0];
    }
    char ipText[32];
-   esprintf(ipText, "%d.%d.%d.%d", ((ip>>0)&0xFF), ((ip>>8)&0xFF), ((ip>>16)&0xFF), ((ip>>24)&0xFF));
+   sprintf(ipText, "%d.%d.%d.%d", ((ip >> 0) & 0xFF), ((ip >> 8) & 0xFF), ((ip >> 16) & 0xFF), ((ip >> 24) & 0xFF));
    if( ((ip>>0)&0xFF) != 255 )
    {
       printf("Connecting to '%s' (%d.%d.%d.%d)\n", commandlineInput.host, ((ip>>0)&0xFF), ((ip>>8)&0xFF), ((ip>>16)&0xFF), ((ip>>24)&0xFF));
