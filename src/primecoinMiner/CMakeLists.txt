@@ -50,8 +50,10 @@ set(jhPrimeminer_SOURCES
 )
 
 if(UNIX)
+	SET(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wunused-function -Wno-write-strings -std=gnu++0x")
-	
+
+
 	include_directories(${jhPrimeminer_SOURCE_DIR}/lib/linux/mpir)
 else()
 	include_directories(${jhPrimeminer_SOURCE_DIR}/lib)
