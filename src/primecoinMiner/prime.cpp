@@ -7,6 +7,7 @@
 #include <time.h>
 #include <set>
 #include <algorithm>
+#include <intrin.h>
 
 // Prime Table
 //std::vector<unsigned int> vPrimes;
@@ -841,7 +842,7 @@ static bool ProbablePrimeChainTestFast(const mpz_class& mpzPrimeChainOrigin, CPr
 //boost::thread_specific_ptr<CSieveOfEratosthenes> psieve;
 
 // Mine probable prime chain of form: n = h * p# +/- 1
-bool MineProbablePrimeChain(CSieveOfEratosthenes*& psieve, primecoinBlock_t* block, mpz_class& mpzFixedMultiplier, bool& fNewBlock, unsigned int& nTriedMultiplier, unsigned int& nProbableChainLength, 
+bool MineProbablePrimeChain(PRIME_MULTIPLIER_METHOD method, CSieveOfEratosthenes*& psieve, primecoinBlock_t* block, mpz_class& mpzFixedMultiplier, bool& fNewBlock, unsigned int& nTriedMultiplier, unsigned int& nProbableChainLength, 
                             unsigned int& nTests, unsigned int& nPrimesHit, sint32 threadIndex, mpz_class& mpzHash, unsigned int nPrimorialMultiplier)
 {
 
@@ -881,12 +882,12 @@ bool MineProbablePrimeChain(CSieveOfEratosthenes*& psieve, primecoinBlock_t* blo
    {
       // Build sieve
       psieve = new CSieveOfEratosthenes(nMaxSieveSize, nSievePercentage, nSieveExtensions, lSieveTarget, lSieveBTTarget, mpzHash, mpzFixedMultiplier);
-      psieve->Weave();
+      psieve->Weave(method);
    }
    else
    {
       psieve->Init(nMaxSieveSize, nSievePercentage, nSieveExtensions, lSieveTarget, lSieveBTTarget, mpzHash, mpzFixedMultiplier);
-      psieve->Weave();
+      psieve->Weave(method);
    }
 
    primeStats.nSieveRounds++;
@@ -1459,38 +1460,156 @@ static unsigned int int_invert(unsigned int a, unsigned int nPrime)
    return (inverse + nPrime) % nPrime;
 }
 
-
-
-void CSieveOfEratosthenes::ProcessMultiplier(sieve_word_t *vfComposites, const unsigned int nMinMultiplier, const unsigned int nMaxMultiplier, const std::vector<unsigned int>& vPrimes, unsigned int *vMultipliers, unsigned int nLayerSeq)
+void CSieveOfEratosthenes::ProcessMultiplier(PRIME_MULTIPLIER_METHOD method, sieve_word_t *vfComposites, const unsigned int nMinMultiplier, const unsigned int nMaxMultiplier, const std::vector<unsigned int>& vPrimes, unsigned int *vMultipliers, unsigned int nLayerSeq)
 {
-   // Wipe the part of the array first
-   if (nMinMultiplier < nMaxMultiplier)
-      memset(vfComposites + GetWordNum(nMinMultiplier), 0, (nMaxMultiplier - nMinMultiplier + nWordBits - 1) / nWordBits * sizeof(sieve_word_t));
+	// Wipe the part of the array first
+	if (nMinMultiplier < nMaxMultiplier)
+		memset(vfComposites + GetWordNum(nMinMultiplier), 0, (nMaxMultiplier - nMinMultiplier + nWordBits - 1) / nWordBits * sizeof(sieve_word_t));
 
-   for (unsigned int nPrimeSeqLocal = nMinPrimeSeq; nPrimeSeqLocal < nPrimes; nPrimeSeqLocal++)
-   {
-      const unsigned int nPrime = vPrimes[nPrimeSeqLocal];
-      const unsigned int nMultiplierPos = nPrimeSeqLocal * nSieveLayers + nLayerSeq;
-      unsigned int nVariableMultiplier = vMultipliers[nMultiplierPos];
-      if (nVariableMultiplier < nMinMultiplier)
-         nVariableMultiplier += (nMinMultiplier - nVariableMultiplier + nPrime - 1) / nPrime * nPrime;
-#ifdef USE_ROTATE
-      const unsigned int nRotateBits = nPrime % nWordBits;
-      sieve_word_t lBitMask = GetBitMask(nVariableMultiplier);
-      for (; nVariableMultiplier < nMaxMultiplier; nVariableMultiplier += nPrime)
-      {
-         vfComposites[GetWordNum(nVariableMultiplier)] |= lBitMask;
-         lBitMask = (lBitMask << nRotateBits) | (lBitMask >> (nWordBits - nRotateBits));
-      }
-      vMultipliers[nMultiplierPos] = nVariableMultiplier;
-#else
-      for (; nVariableMultiplier < nMaxMultiplier; nVariableMultiplier += nPrime)
-      {
-         vfComposites[GetWordNum(nVariableMultiplier)] |= GetBitMask(nVariableMultiplier);
-      }
-      vMultipliers[nMultiplierPos] = nVariableMultiplier;
-#endif
-   }
+	for (unsigned int nPrimeSeqLocal = nMinPrimeSeq; nPrimeSeqLocal < nPrimes; nPrimeSeqLocal++)
+	{
+		const unsigned int nPrime = vPrimes[nPrimeSeqLocal];
+		const unsigned int nMultiplierPos = nPrimeSeqLocal * nSieveLayers + nLayerSeq;
+		unsigned int nVariableMultiplier = vMultipliers[nMultiplierPos];
+		if (nVariableMultiplier < nMinMultiplier)
+			nVariableMultiplier += (nMinMultiplier - nVariableMultiplier + nPrime - 1) / nPrime * nPrime;
+		const sieve_word_t nRotateBits = nPrime % nWordBits;
+		sieve_word_t lBitMask = GetBitMask(nVariableMultiplier);
+
+		if (nVariableMultiplier >= nMaxMultiplier)
+		{
+			vMultipliers[nMultiplierPos] = nVariableMultiplier;
+			continue;
+		}
+
+		switch (method)
+		{
+		case MULTIPLIER_SIMPLE:
+			for (; nVariableMultiplier < nMaxMultiplier; nVariableMultiplier += nPrime)
+			{
+				vfComposites[GetWordNum(nVariableMultiplier)] |= GetBitMask(nVariableMultiplier);
+			}
+			break;
+		case MULTIPLIER_ROTATE:
+			for (; nVariableMultiplier < nMaxMultiplier; nVariableMultiplier += nPrime)
+			{
+				vfComposites[GetWordNum(nVariableMultiplier)] |= lBitMask;
+				lBitMask = (lBitMask << nRotateBits) | (lBitMask >> (nWordBits - nRotateBits));
+			}
+			break;
+		case MULTIPLIER_ROTATE_CACHE: {
+			unsigned int curIndex = GetWordNum(nVariableMultiplier);
+			sieve_word_t* pCurComp = vfComposites + curIndex;
+			sieve_word_t curMask = 0;
+			for (; nVariableMultiplier < nMaxMultiplier; nVariableMultiplier += nPrime)
+			{
+				unsigned int newIndex = GetWordNum(nVariableMultiplier);
+				unsigned int difference = newIndex - curIndex;
+				if (difference)
+				{
+					curIndex = newIndex;
+					*pCurComp |= curMask; //'slow'!
+					curMask = lBitMask;
+					pCurComp += difference;
+				}
+				curMask |= lBitMask;
+				//lBitMask = _rotl64(lBitMask, nRotateBits);
+				lBitMask = (lBitMask << nRotateBits) | (lBitMask >> (nWordBits - nRotateBits));
+			}
+			*pCurComp |= curMask; //'slow'!
+		} break;
+		case MULTIPLIER_SSE: {
+			sieve_word_t lBitMask = GetBitMask(nVariableMultiplier);
+
+			int nLoopMod = (nMaxMultiplier - nVariableMultiplier) % nPrime;
+			int nVarLoops = (nMaxMultiplier - nVariableMultiplier) / nPrime;
+			if (nLoopMod > 0)
+				nVarLoops++;
+			int nVarIndex = 0;
+
+			//This is the most naive SSE implementation possible
+			//The only REAL bottleneck seems to be reading and writing to the composite array, SSE can't do much about that
+			//Todo: optimize or wait for AVX512...
+			const __m128i xmmPrime = _mm_set1_epi32(nPrime);
+			const __m128i xmmModMask = _mm_set1_epi32(nWordBits - 1); //Full downward mask of nWordBits
+			const __m128i xmmShiftMask13 = _mm_set_epi32(0xFFFFFFFF, 0, 0xFFFFFFFF, 0); //Mask to convert to 64
+			const __m128i xmmShiftMask24 = _mm_set_epi32(0, 0xFFFFFFFF, 0, 0xFFFFFFFF); //Mask to convert to 64
+			const __m128i xmmOne = _mm_set_epi32(0, 1, 0, 1); //_mm_set_epi64(1)
+			const __m128i xmmWordDiv = _mm_set_epi32(0, 0, 0, 6); //1 << 6 = nWordBits (64)
+			const __m128i xmmLoopAdd = _mm_set_epi32(3, 2, 1, 0); //1 << 6 = nWordBits (64)
+
+			//__declspec(align(16)) sieve_word_t result[4]; //Order = 1324
+			//__declspec(align(16)) int shift[4];
+			__declspec(align(16)) unsigned int compositeIndices[4];
+
+			for (; nVarIndex < nVarLoops - 4; nVarIndex += 4)
+			{
+				//const unsigned int luVarMulCur = (nVariableMultiplier + nVarIndex * nPrime);
+				//__m128i xmmIndices = _mm_set_epi32(nVarIndex + 3, nVarIndex + 2, nVarIndex + 1, nVarIndex + 0);
+				__m128i xmmIndices = _mm_add_epi32(xmmLoopAdd, _mm_set1_epi32(nVarIndex));
+				__m128i xmmMulAdd = _mm_mullo_epi32(xmmIndices, xmmPrime);
+				__m128i xmmVarMulCur = _mm_add_epi32(xmmMulAdd, _mm_set1_epi32(nVariableMultiplier));
+
+				//sieve_word_t ullBit = 1ULL << (luVarMulCur % nWordBits);
+				__m128i xmmShiftCount = _mm_and_si128(xmmVarMulCur, xmmModMask);
+
+				//TODO need XOP for proper (_mm_shl_epi32()) shift. sigh.
+				//__m128i xmmShiftCount13 = _mm_shuffle_epi32(_mm_and_si128(xmmShiftCount, xmmShiftMask13), _MM_SHUFFLE(2, 3, 2, 1));
+				//__m128i xmmShiftCount24 = _mm_and_si128(xmmShiftCount, xmmShiftMask24);
+				//__m128i xmmFinalMask13 = _mm_sll_epi64(xmmOne, xmmShiftCount13);
+				//__m128i xmmFinalMask24 = _mm_sll_epi64(xmmOne, xmmShiftCount24);
+
+				//int compositeIndex = luVarMulCur / nWordBits;
+				__m128i xmmCompIndices = _mm_srl_epi32(xmmVarMulCur, xmmWordDiv);
+
+				//vfComposites[compositeIndex] |= ullBit;
+				//_mm_store_si128((__m128i*)result, xmmFinalMask13);
+				//_mm_store_si128((__m128i*)(result + 2), xmmFinalMask24);
+				//_mm_store_si128((__m128i*)shift, xmmShiftCount);
+				_mm_store_si128((__m128i*)compositeIndices, xmmCompIndices);
+
+				//Test
+				//for (int s = 0; s < 4; s++)
+				//{
+				//	unsigned int luVarMulCur = (nVariableMultiplier + (nVarIndex + s) * nPrime);
+				//	int shiftSingle = luVarMulCur % nWordBits;
+				//	int compositeIndex = luVarMulCur / nWordBits;
+				//	//vfComposites[compositeIndex] |= 1ULL << shiftSingle;
+				//	assert(compositeIndex == compositeIndices[s]);
+				//	if (s == 0) assert(shift[0] == shiftSingle);
+				//	if (s == 1) assert(shift[1] == shiftSingle);
+				//	if (s == 2) assert(shift[2] == shiftSingle);
+				//	if (s == 3) assert(shift[3] == shiftSingle);
+				//}
+
+				sieve_word_t w1 = 1ULL << _mm_extract_epi32(xmmShiftCount, 0);
+				sieve_word_t w2 = 1ULL << _mm_extract_epi32(xmmShiftCount, 1);
+				sieve_word_t w3 = 1ULL << _mm_extract_epi32(xmmShiftCount, 2);
+				sieve_word_t w4 = 1ULL << _mm_extract_epi32(xmmShiftCount, 3);
+
+				vfComposites[compositeIndices[0]] |= w1;
+				vfComposites[compositeIndices[1]] |= w2;
+				vfComposites[compositeIndices[2]] |= w3;
+				vfComposites[compositeIndices[3]] |= w4;
+				//vfComposites[_mm_extract_epi32(xmmCompIndices, 0)] |= w1;
+				//vfComposites[_mm_extract_epi32(xmmCompIndices, 1)] |= w2;
+				//vfComposites[_mm_extract_epi32(xmmCompIndices, 2)] |= w3;
+				//vfComposites[_mm_extract_epi32(xmmCompIndices, 3)] |= w4;
+			}
+
+			//SSE only does pairs of 4, finish remaining multipliers here
+			//Note: this loop is an independent loop, doesn't rely on anything from previous iterations
+			for (; nVarIndex < nVarLoops; nVarIndex++)
+			{
+				unsigned int nRotCur = (nRotateBits * nVarIndex) % nWordBits;
+				sieve_word_t lShiftedMask = (lBitMask << nRotCur) | (lBitMask >> (nWordBits - nRotCur));
+				vfComposites[((nVariableMultiplier + nVarIndex * nPrime) / nWordBits)] |= lShiftedMask;
+			}
+		} break;
+		}
+
+		vMultipliers[nMultiplierPos] = nVariableMultiplier;
+	}
 }
 
 
@@ -1498,7 +1617,7 @@ void CSieveOfEratosthenes::ProcessMultiplier(sieve_word_t *vfComposites, const u
 // Return values:
 //   True  - weaved another prime; nComposite - number of composites removed
 //   False - sieve already completed
-bool CSieveOfEratosthenes::Weave()
+bool CSieveOfEratosthenes::Weave(PRIME_MULTIPLIER_METHOD method)
 {
    // Faster GMP version
    uint32 start = GetTickCount(); 
@@ -1636,14 +1755,14 @@ bool CSieveOfEratosthenes::Weave()
          //    break;  // new block
          if (nLayerSeq < nChainLength)
          {
-            ProcessMultiplier(vfCompositeLayerCC1, nMinMultiplier, nMaxMultiplier, vPrimes, vCunningham1Multipliers, nLayerSeq);
-            ProcessMultiplier(vfCompositeLayerCC2, nMinMultiplier, nMaxMultiplier, vPrimes, vCunningham2Multipliers, nLayerSeq);
+            ProcessMultiplier(method, vfCompositeLayerCC1, nMinMultiplier, nMaxMultiplier, vPrimes, vCunningham1Multipliers, nLayerSeq);
+            ProcessMultiplier(method, vfCompositeLayerCC2, nMinMultiplier, nMaxMultiplier, vPrimes, vCunningham2Multipliers, nLayerSeq);
          }
          else
          {
             // Optimize: First halves of the arrays are not needed in the extensions
-            ProcessMultiplier(vfCompositeLayerCC1, nExtMinMultiplier, nMaxMultiplier, vPrimes, vCunningham1Multipliers, nLayerSeq);
-            ProcessMultiplier(vfCompositeLayerCC2, nExtMinMultiplier, nMaxMultiplier, vPrimes, vCunningham2Multipliers, nLayerSeq);
+            ProcessMultiplier(method, vfCompositeLayerCC1, nExtMinMultiplier, nMaxMultiplier, vPrimes, vCunningham1Multipliers, nLayerSeq);
+            ProcessMultiplier(method, vfCompositeLayerCC2, nExtMinMultiplier, nMaxMultiplier, vPrimes, vCunningham2Multipliers, nLayerSeq);
          }
 
          // Apply the layer to the primary sieve arrays

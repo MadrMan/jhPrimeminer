@@ -15,6 +15,15 @@ typedef uint64 sieve_word_t;
 typedef unsigned long sieve_word_t;
 #endif
 
+enum PRIME_MULTIPLIER_METHOD
+{
+	MULTIPLIER_SIMPLE,
+	MULTIPLIER_ROTATE,
+	MULTIPLIER_ROTATE_CACHE,
+	MULTIPLIER_SSE,
+	MULTIPLIER_INVALID //Dont use
+};
+
 //#include "main.h"
 #include <mpirxx.h>
 
@@ -189,7 +198,7 @@ class CSieveOfEratosthenes
       return (sieve_word_t)1UL << (nBitNum % nWordBits);
    }
 
-   void ProcessMultiplier(sieve_word_t *vfComposites, const unsigned int nMinMultiplier, const unsigned int nMaxMultiplier, const std::vector<unsigned int>& vPrimes, unsigned int *vMultipliers, unsigned int nLayerSeq);
+   void ProcessMultiplier(PRIME_MULTIPLIER_METHOD method, sieve_word_t *vfComposites, const unsigned int nMinMultiplier, const unsigned int nMaxMultiplier, const std::vector<unsigned int>& vPrimes, unsigned int *vMultipliers, unsigned int nLayerSeq);
 
 public:
    CSieveOfEratosthenes(unsigned int nSieveSize, unsigned int nSievePercentage, unsigned int nSieveExtensions, unsigned int nTargetChainLength, unsigned int nTargetBTLength, mpz_class& mpzHash, mpz_class& mpzFixedMultiplier)
@@ -476,7 +485,7 @@ public:
    // Return values:
    //   True  - weaved another prime; nComposite - number of composites removed
    //   False - sieve already completed
-   bool Weave();
+   bool Weave(PRIME_MULTIPLIER_METHOD method);
 };
 
 inline void mpz_set_uint256(mpz_t r, uint256& u)

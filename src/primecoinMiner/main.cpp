@@ -57,6 +57,7 @@ typedef struct
    sint32 targetBTOverride;
    sint32 sieveExtensions;
    bool printDebug;
+   PRIME_MULTIPLIER_METHOD multiplierMethod;
    // getblocktemplate stuff
    char* xpmAddress; // we will use this XPM address for block payout
 }commandlineInput_t;
@@ -775,7 +776,7 @@ int jhMiner_workerThread_getwork(int threadIndex)
       // ypool uses a special encrypted serverData value to speedup identification of merkleroot and share data
       memcpy(&primecoinBlock.serverData, serverData, 32);
       // start mining
-      if (!BitcoinMiner(&primecoinBlock, psieve, threadIndex, commandlineInput.numThreads))
+      if (!BitcoinMiner(&primecoinBlock, psieve, threadIndex, commandlineInput.numThreads, commandlineInput.multiplierMethod))
          break;
       primecoinBlock.mpzPrimeChainMultiplier = 0;
    }
@@ -848,7 +849,7 @@ int jhMiner_workerThread_gbt(int threadIndex)
       workData.cs.unlock();
       primecoinBlock.xptMode = false;
       // start mining
-      if (!BitcoinMiner(&primecoinBlock, psieve, threadIndex, commandlineInput.numThreads))
+	  if (!BitcoinMiner(&primecoinBlock, psieve, threadIndex, commandlineInput.numThreads, commandlineInput.multiplierMethod))
          break;
       primecoinBlock.mpzPrimeChainMultiplier = 0;
    }
@@ -889,7 +890,7 @@ int jhMiner_workerThread_xpt(int threadIndex)
       memcpy(&primecoinBlock.serverData, serverData, 32);
       // start mining
       //uint32 time1 = GetTickCount();
-      if (!BitcoinMiner(&primecoinBlock, psieve, threadIndex, commandlineInput.numThreads))
+	  if (!BitcoinMiner(&primecoinBlock, psieve, threadIndex, commandlineInput.numThreads, commandlineInput.multiplierMethod))
          break;
       //printf("Mining stopped after %dms\n", GetTickCount()-time1);
       primecoinBlock.mpzPrimeChainMultiplier = 0;
@@ -1179,11 +1180,26 @@ void jhMiner_parseCommandline(int argc, char **argv)
       {
          commandlineInput.useXPT = true;
       }
-      else if( memcmp(argument, "-help", 6)==0 || memcmp(argument, "--help", 7)==0 )
-      {
-         jhMiner_printHelp();
-         exit(0);
-      }
+	  else if (memcmp(argument, "-help", 6) == 0 || memcmp(argument, "--help", 7) == 0)
+	  {
+		  jhMiner_printHelp();
+		  exit(0);
+	  }
+	  else if (memcmp(argument, "-mpmethod", 10) == 0) 
+	  {
+		  if (cIdx >= argc)
+		  {
+			  printf("Missing number after -mpmethod option\n");
+			  exit(0);
+		  }
+		  commandlineInput.multiplierMethod = (PRIME_MULTIPLIER_METHOD)atoi(argv[cIdx]);
+		  if (commandlineInput.multiplierMethod >= MULTIPLIER_INVALID || commandlineInput.multiplierMethod < 0)
+		  {
+			  printf("-mpmethod parameter out of range must be >=0 and <=%d\n", MULTIPLIER_INVALID - 1);
+			  exit(0);
+		  }
+		  cIdx++;
+	  }
       else
       {
          printf("'%s' is an unknown option.\nType jhPrimeminer.exe --help for more info\n", argument); 
@@ -1805,6 +1821,7 @@ int main(int argc, char **argv)
    commandlineInput.sieveExtensions = 7;
    commandlineInput.printDebug = 0;
    commandlineInput.sievePrimeLimit = 0;
+   commandlineInput.multiplierMethod = MULTIPLIER_SIMPLE;
    // parse command lines
    jhMiner_parseCommandline(argc, argv);
    // Sets max sieve size
@@ -1855,7 +1872,8 @@ int main(int argc, char **argv)
    // print header
    printf("\n");
    printf("\xC9\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xBB\n");
-   printf("\xBA  jhPrimeMiner - mod by rdebourbon -v3.4beta                   \xBA\n");
+   printf("\xBA  jhPrimeMiner - mod by MadrMan                                \xBA\n");
+   printf("\xBA     forked from rdebourbon -v3.4beta                          \xBA\n");
    printf("\xBA     merged with hg5fm (mumus) v8.0 build                      \xBA\n");
    printf("\xBA  author: JH (http://ypool.net)                                \xBA\n");
    printf("\xBA  contributors: x3maniac                                       \xBA\n");
@@ -1880,6 +1898,7 @@ int main(int argc, char **argv)
    // init prime table
    GeneratePrimeTable(commandlineInput.sievePrimeLimit);
    printf("Sieve Percentage: %u %%\n", nSievePercentage);
+   printf("Sieve multiplier method: %u\n", commandlineInput.multiplierMethod);
    // init winsock
    #ifdef _WIN32
    WSADATA wsa;
